@@ -1,0 +1,98 @@
+# Grafana Configuration
+adminUser: admin
+adminPassword: admin  # Change this in production
+
+persistence:
+  enabled: true
+  size: 5Gi
+  accessModes:
+    - ReadWriteOnce
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+securityContext:
+  runAsUser: 472
+  runAsGroup: 472
+  fsGroup: 472
+
+# Data Sources
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-server:9090
+        access: proxy
+        isDefault: true
+        editable: false
+      - name: Loki
+        type: loki
+        url: http://loki:3100
+        access: proxy
+        isDefault: false
+        editable: false
+
+# Dashboard Providers
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards
+
+# Default Dashboards
+dashboards:
+  default:
+    kubernetes-cluster:
+      file: dashboards/kubernetes-cluster.json
+    node-exporter:
+      file: dashboards/node-exporter.json
+    kubernetes-pods:
+      file: dashboards/kubernetes-pods.json
+    loki-logs:
+      file: dashboards/loki-logs.json
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 3000
+  targetPort: 3000
+
+# Ingress configuration (uncomment and modify as needed)
+# ingress:
+#   enabled: true
+#   annotations:
+#     kubernetes.io/ingress.class: nginx
+#   hosts:
+#     - grafana.example.com
+#   tls:
+#     - secretName: grafana-tls
+#       hosts:
+#         - grafana.example.com
+
+# Pod annotations
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "3000"
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {} 

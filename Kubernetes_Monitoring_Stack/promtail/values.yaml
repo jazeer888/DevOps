@@ -1,0 +1,117 @@
+# Promtail Configuration
+config:
+  logLevel: info
+  serverPort: 9080
+  clients:
+    - url: http://loki:3100/loki/api/v1/push
+
+  snippets:
+    extraScrapeConfigs: |
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_controller_name]
+            regex: ([0-9a-z-.]+?)(-[0-9a-f]{8,10})?
+            action: replace
+            target_label: __tmp_controller_name
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name, __meta_kubernetes_pod_label_app, __tmp_controller_name, __meta_kubernetes_pod_name]
+            regex: ^;*([^;]+)(;.*)?$
+            action: replace
+            target_label: app
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component, __meta_kubernetes_pod_label_component]
+            regex: ^;*([^;]+)(;.*)?$
+            action: replace
+            target_label: component
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            action: replace
+            target_label: kubernetes_container_name
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            action: replace
+            target_label: kubernetes_node_name
+
+    pipelineStages:
+      - cri: {}
+      - json:
+          expressions:
+            level: level
+            msg: message
+            timestamp: timestamp
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+      - labels:
+          level:
+      - output:
+          source: msg
+
+  positions:
+    filename: /run/promtail/positions.yaml
+
+  scrape_configs:
+    - job_name: kubernetes-pods
+      kubernetes_sd_configs:
+        - role: pod
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_pod_controller_name]
+          regex: ([0-9a-z-.]+?)(-[0-9a-f]{8,10})?
+          action: replace
+          target_label: __tmp_controller_name
+        - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name, __meta_kubernetes_pod_label_app, __tmp_controller_name, __meta_kubernetes_pod_name]
+          regex: ^;*([^;]+)(;.*)?$
+          action: replace
+          target_label: app
+        - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component, __meta_kubernetes_pod_label_component]
+          regex: ^;*([^;]+)(;.*)?$
+          action: replace
+          target_label: component
+        - source_labels: [__meta_kubernetes_namespace]
+          action: replace
+          target_label: kubernetes_namespace
+        - source_labels: [__meta_kubernetes_pod_name]
+          action: replace
+          target_label: kubernetes_pod_name
+        - source_labels: [__meta_kubernetes_pod_container_name]
+          action: replace
+          target_label: kubernetes_container_name
+        - source_labels: [__meta_kubernetes_pod_node_name]
+          action: replace
+          target_label: kubernetes_node_name
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 100m
+    memory: 128Mi
+
+securityContext:
+  runAsUser: 0
+  runAsGroup: 0
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 9080
+  targetPort: 9080
+
+# Pod annotations
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9080"
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {} 

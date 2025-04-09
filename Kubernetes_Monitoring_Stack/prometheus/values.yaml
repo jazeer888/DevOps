@@ -1,0 +1,114 @@
+# Prometheus Stack Configuration
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 8Gi
+    securityContext:
+      runAsUser: 65534
+      runAsGroup: 65534
+      fsGroup: 65534
+
+alertmanager:
+  alertmanagerSpec:
+    retention: 120h
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+      limits:
+        memory: 256Mi
+        cpu: 200m
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 1Gi
+
+grafana:
+  enabled: false  # We'll configure Grafana separately
+
+# Default ServiceMonitor configurations
+defaultRules:
+  create: true
+  rules:
+    alertmanager: true
+    etcd: true
+    configReloaders: true
+    general: true
+    k8s: true
+    kubeApiserver: true
+    kubePrometheusNodeAlerting: true
+    kubePrometheusNodeRecording: true
+    kubernetesAbsent: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    kubernetesSystem: true
+    kubeScheduler: true
+    kubeStateMetrics: true
+    network: true
+    node: true
+    prometheus: true
+    prometheusOperator: true
+
+# ServiceMonitor configurations
+serviceMonitorSelectorNilUsesHelmValues: false
+serviceMonitorSelector: {}
+serviceMonitorNamespaceSelector: {}
+
+# PodMonitor configurations
+podMonitorSelectorNilUsesHelmValues: false
+podMonitorSelector: {}
+podMonitorNamespaceSelector: {}
+
+# Probe configurations
+probeSelectorNilUsesHelmValues: false
+probeSelector: {}
+probeNamespaceSelector: {}
+
+# Rule configurations
+ruleSelectorNilUsesHelmValues: false
+ruleSelector: {}
+ruleNamespaceSelector: {}
+
+# Additional scrape configs
+additionalScrapeConfigs:
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: kubernetes_pod_name 
