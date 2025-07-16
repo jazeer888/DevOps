@@ -159,4 +159,3 @@ tls:
 
 ---
 
-Let me know if you'd like this as a downloadable file or if you need a version for `cert-manager` automation! 
